@@ -91,7 +91,7 @@ class WorkflowEngine:
 
         logger.info(f"Creating new connector for service: '{service_name}', ID: '{connector_id}'")
         connector = None
-        
+
         # Configuration priority:
         # 1. connector_config_from_workflow (specific to this action's connector instance)
         # 2. self.global_config (workflow-wide settings)
@@ -118,12 +118,12 @@ class WorkflowEngine:
                               self.global_config.get('GOOGLE_TOKEN_FILE_PATH') or \
                               os.getenv('GOOGLE_TOKEN_FILE_PATH') or \
                               default_token_path
-            
+
             if not os.path.exists(client_secret_file):
                  # Note: This check is done here, but connector's connect() also checks.
                  # Redundant but can provide earlier feedback in workflow engine.
                  logger.warning(f"Google Sheets client_secret_file ('{client_secret_file}') not found for connector '{connector_id}'. Authentication will likely fail if token doesn't exist.")
-            
+
             connector = GoogleSheetsConnector(client_secret_file=client_secret_file, token_file_path=token_file_path)
 
         elif service_name == "email":
@@ -155,7 +155,7 @@ class WorkflowEngine:
             if isinstance(use_tls, str): use_tls = use_tls.lower() == 'true'
 
 
-            connector = EmailConnector(smtp_host=smtp_host, smtp_port=smtp_port, 
+            connector = EmailConnector(smtp_host=smtp_host, smtp_port=smtp_port,
                                        smtp_user=smtp_user, smtp_password=smtp_password,
                                        sender_email=sender_email, use_tls=use_tls)
         else:
@@ -173,7 +173,7 @@ class WorkflowEngine:
                 # Let's ensure the original exception context is preserved if we re-raise.
                 # raise ConnectionError(f"Failed to connect connector '{connector_id}' for service '{service_name}'") from e
                 # The current 'raise' without arguments already preserves context.
-                raise 
+                raise
         else:
             # This case should ideally be caught by the "Unknown service name" error above.
             # However, if it's reached, it indicates a logic flaw in the connector selection.
@@ -208,7 +208,7 @@ class WorkflowEngine:
 
         template_key = match.group(1)
         keys = template_key.split('.')
-        
+
         current_val = context_data
         try:
             for i, key_part in enumerate(keys):
@@ -228,7 +228,7 @@ class WorkflowEngine:
                     path_so_far = ".".join(keys[:i+1])
                     logger.warning(f"Failed to resolve template '{value}': Path part '{key_part}' not accessible in non-dict/non-list type ({type(current_val)}) at path '{path_so_far}'.")
                     return value # Return original template string
-            
+
             # Successfully resolved the entire path
             logger.debug(f"Resolved template '{value}' to: {current_val}")
             return current_val
@@ -274,7 +274,7 @@ class WorkflowEngine:
                                                    or the workflow definition as a dictionary.
         Returns:
             dict: The final workflow data cache containing outputs from all steps.
-        
+
         Raises:
             Exception: If critical errors occur during workflow loading or execution.
         """
@@ -284,7 +284,7 @@ class WorkflowEngine:
         # with the same engine instance. For isolated runs, resetting is fine.
         # For now, let's assume connectors can be reused if connector_ids are the same.
         # A more robust approach might involve a dedicated cleanup/reset method or explicit connector management.
-        
+
         try:
             if isinstance(definition_path_or_dict, str):
                 workflow_definition = self.load_workflow_definition(definition_path_or_dict)
@@ -326,51 +326,51 @@ class WorkflowEngine:
             actions = workflow_definition.get('actions', [])
             if not actions:
                 logger.info("Workflow has no actions to execute.")
-            
+
             for action_def in actions:
                 action_id = action_def.get('id')
                 if not action_id:
                     logger.error(f"Action definition is missing 'id'. Skipping: {action_def}")
                     # Or raise ValueError("Action ID is mandatory")
-                    continue 
-                
+                    continue
+
                 service_name = action_def.get('service')
                 action_name = action_def.get('action') # Specific method on the connector
-                
+
                 if not service_name or not action_name:
                     logger.error(f"Action '{action_id}' is missing 'service' or 'action' name. Skipping.")
                     self.workflow_data_cache[action_id] = {
-                        "status": "error", 
+                        "status": "error",
                         "error_message": "Missing service or action name in definition",
                         "details": f"Action definition: {action_def}"
                     }
                     continue
 
-                connector_id_from_def = action_def.get('connector_id', action_id) 
-                action_config_template = action_def.get('config', {}) 
+                connector_id_from_def = action_def.get('connector_id', action_id)
+                action_config_template = action_def.get('config', {})
                 connector_specific_config = action_def.get('connector_config', {})
 
                 logger.info(f"--- Preparing action: '{action_id}' (Service: {service_name}, Action: {action_name}, Connector ID: {connector_id_from_def}) ---")
 
                 try:
                     connector = self._get_connector(service_name, connector_id_from_def, connector_specific_config)
-                    
+
                     logger.debug(f"Action '{action_id}' - Original params template from workflow: {action_config_template}")
                     execute_action_params = self._prepare_action_params(action_config_template, self.workflow_data_cache)
                     logger.info(f"Action '{action_id}' - Resolved params for connector.execute_action: {execute_action_params}")
-                    
+
                     current_action_output = connector.execute_action(action_name, execute_action_params)
-                    
+
                     # Ensure output is serializable and consistent (dict)
                     if not isinstance(current_action_output, dict):
                         logger.warning(f"Output from action '{action_id}' (service: {service_name}, action: {action_name}) is not a dictionary: {type(current_action_output)}. Wrapping it.")
                         current_action_output = {"result": current_action_output}
-                    
+
                     self.workflow_data_cache[action_id] = current_action_output
                     logger.info(f"Action '{action_id}' executed successfully. Output stored in workflow_data_cache.")
                     logger.debug(f"Action '{action_id}' - Output data: {current_action_output}")
 
-                except ValueError as ve: 
+                except ValueError as ve:
                     err_msg = f"Configuration or Value error for action '{action_id}': {str(ve)}"
                     logger.error(err_msg, exc_info=True)
                     self.workflow_data_cache[action_id] = {"status": "error", "error_message": err_msg, "details": traceback.format_exc()}
@@ -382,7 +382,7 @@ class WorkflowEngine:
                     err_msg = f"Unexpected error executing action '{action_id}': {str(e)}"
                     logger.error(err_msg, exc_info=True)
                     self.workflow_data_cache[action_id] = {"status": "error", "error_message": err_msg, "details": traceback.format_exc()}
-                
+
                 logger.info(f"--- Finished action: '{action_id}' ---")
 
 
@@ -396,7 +396,7 @@ class WorkflowEngine:
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
+
     # For the example to run, you might need to:
     # 1. Create a dummy 'credentials.json' and 'token.json' if Google Sheets connector is used.
     #    (The connector itself has notes on this for its __main__ block).
@@ -407,12 +407,12 @@ if __name__ == '__main__':
     #
     # For simulation of connector API calls (to avoid actual external calls):
     #    export OPENAI_API_SIMULATE="true"
-    #    export EMAIL_SIMULATE="true" 
+    #    export EMAIL_SIMULATE="true"
     #    (GoogleSheetsConnector has its own simulation notes, currently simulates get_sheet_data for a specific ID)
 
     engine = WorkflowEngine(global_config={
         # Example of global configs - these could be overridden by connector_config in workflow or env vars
-        # "OPENAI_API_KEY": "sk-global_config_key_example", 
+        # "OPENAI_API_KEY": "sk-global_config_key_example",
         # "SMTP_USER": "global_user@example.com",
         # "SMTP_PASSWORD": "global_password"
     })
@@ -424,15 +424,15 @@ if __name__ == '__main__':
     # Ensure the path is correct based on where you run the script from.
     # If running `python -m integration_platform.workflow.workflow_engine` from project root:
     definition_file_from_module_run = "workflow_definition_example.json" # Path relative to this file's dir
-    
+
     # If running `python integration_platform/workflow/workflow_engine.py` from project root:
     definition_file_from_script_run = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 
+        os.path.dirname(os.path.abspath(__file__)),
         "workflow_definition_example.json"
     )
 
     # Choose the appropriate path
-    definition_file = definition_file_from_script_run 
+    definition_file = definition_file_from_script_run
     if not os.path.exists(definition_file):
         definition_file = definition_file_from_module_run # Fallback for -m execution
 
@@ -480,7 +480,7 @@ if __name__ == '__main__':
                         logger.warning(f"Error occurred in action '{action_id}': {result_data.get('error_message')}")
                         if result_data.get('details'):
                             logger.debug(f"Error details for '{action_id}':\n{result_data['details']}")
-            
+
         except FileNotFoundError:
             logger.error(f"Example workflow definition not found. Ensure '{definition_file}' exists.")
         except Exception as e:

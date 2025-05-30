@@ -12,7 +12,7 @@ class TestWorkflowEngineResolution(unittest.TestCase):
     def setUp(self):
         logger.debug("Setting up TestWorkflowEngineResolution test case.")
         # Initialize engine with no global_config for these specific tests
-        self.engine = WorkflowEngine(global_config={}) 
+        self.engine = WorkflowEngine(global_config={})
         self.context_data = {
             "trigger": {
                 "data": {"text": "Hello World", "id": 123, "value_is_none": None},
@@ -24,7 +24,7 @@ class TestWorkflowEngineResolution(unittest.TestCase):
                     "summary": "This is a summary.",
                     "details": {"status": "success", "code": 200},
                     "items": [
-                        {"name": "item1", "value": 10}, 
+                        {"name": "item1", "value": 10},
                         {"name": "item2", "value": 20}
                     ],
                     "is_processed": True,
@@ -37,7 +37,7 @@ class TestWorkflowEngineResolution(unittest.TestCase):
             }
         }
         # Simulate how workflow_data_cache would look
-        self.engine.workflow_data_cache = self.context_data 
+        self.engine.workflow_data_cache = self.context_data
         logger.debug(f"Setup complete. Initial context_data: {self.context_data}")
 
     def test_resolve_value_simple_lookup(self):
@@ -70,7 +70,7 @@ class TestWorkflowEngineResolution(unittest.TestCase):
         self.assertEqual(self.engine._resolve_value(test_dict, self.context_data), test_dict)
         test_list = [1, 2, 3]
         self.assertEqual(self.engine._resolve_value(test_list, self.context_data), test_list)
-        
+
     def test_resolve_value_no_curly_braces_returns_as_is(self):
         logger.debug("Running test_resolve_value_no_curly_braces_returns_as_is")
         self.assertEqual(self.engine._resolve_value("trigger.data.text", self.context_data), "trigger.data.text")
@@ -80,7 +80,7 @@ class TestWorkflowEngineResolution(unittest.TestCase):
     def test_resolve_value_key_not_found_in_dict(self, mock_logger_warning):
         logger.debug("Running test_resolve_value_key_not_found_in_dict")
         original_template = "{trigger.data.non_existent_key}"
-        self.assertEqual(self.engine._resolve_value(original_template, self.context_data), original_template, 
+        self.assertEqual(self.engine._resolve_value(original_template, self.context_data), original_template,
                          "Should return original template string if key is not found.")
         mock_logger_warning.assert_called_once()
         self.assertIn("Could not resolve template key 'trigger.data.non_existent_key'", mock_logger_warning.call_args[0][0])
@@ -101,7 +101,7 @@ class TestWorkflowEngineResolution(unittest.TestCase):
                          "Should return original template string on IndexError.")
         mock_logger_warning.assert_called_once()
         self.assertIn("Failed to resolve template '{action1.output_data_key.items.5.name}': Index error or invalid index '5'", mock_logger_warning.call_args[0][0])
-    
+
     @patch('integration_platform.workflow.workflow_engine.logger.warning')
     def test_resolve_value_non_numeric_index_for_list(self, mock_logger_warning):
         logger.debug("Running test_resolve_value_non_numeric_index_for_list")

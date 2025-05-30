@@ -61,7 +61,7 @@ class TestWorkflowEngineExecution(unittest.TestCase):
         # Patch os.getenv for consistent testing of config priority
         self.getenv_patcher = patch.dict(os.environ, {
             "OPENAI_API_KEY": "env_openai_key", # This would be overridden by global/action normally
-            "SMTP_HOST": "smtp.env.com" 
+            "SMTP_HOST": "smtp.env.com"
             # Other env vars for connectors if needed
         }, clear=True) # Clear other env vars that might interfere
         self.mock_getenv = self.getenv_patcher.start()
@@ -97,7 +97,7 @@ class TestWorkflowEngineExecution(unittest.TestCase):
             "generate_text",
             {"prompt": "Summarize: Simulated trigger data for 'test_trigger'", "model": "gpt-test"}
         )
-        
+
         # Assertions for Email connector
         # _get_connector for 'email_default'
         # Email connector should use global_config then os.getenv for its params
@@ -142,8 +142,8 @@ class TestWorkflowEngineExecution(unittest.TestCase):
         mock_openai_instance.execute_action.side_effect = Exception("Mocked OpenAI Action Error")
 
         mock_email_instance = MockEmail.return_value # This will still be prepared
-        mock_email_instance.connect.return_value = True 
-        
+        mock_email_instance.connect.return_value = True
+
         engine = WorkflowEngine(global_config=self.global_config)
         results = engine.run_workflow(self.sample_workflow_def)
 
@@ -166,7 +166,7 @@ class TestWorkflowEngineExecution(unittest.TestCase):
         )
         # The email action itself would then likely succeed or fail based on its own execution,
         # assuming its connector is fine. Here we mock it as successful.
-        self.assertIn("action_email", results) 
+        self.assertIn("action_email", results)
         # If email execute_action was successful despite unresolved template (which it might be if it just sends the string as is)
         # Or, it could fail if the email connector tries to validate the content.
         # For this test, we assume it proceeds and the mock returns success.
@@ -178,7 +178,7 @@ class TestWorkflowEngineExecution(unittest.TestCase):
     def test_load_workflow_from_file_success(self, mock_json_load, mock_file_open):
         logger.debug("Running test_load_workflow_from_file_success")
         mock_json_load.return_value = {"name": "Loaded Workflow", "trigger": {"id":"t"}, "actions":[]}
-        
+
         engine = WorkflowEngine()
         definition = engine.load_workflow_definition("dummy_path.json")
 
@@ -192,7 +192,7 @@ class TestWorkflowEngineExecution(unittest.TestCase):
         engine = WorkflowEngine()
         with self.assertRaises(FileNotFoundError):
             engine.load_workflow_definition("non_existent.json")
-    
+
     @patch('builtins.open', new_callable=mock_open, read_data='invalid json')
     @patch('json.load', side_effect=json.JSONDecodeError("Decode error", "doc", 0))
     def test_load_workflow_invalid_json(self, mock_json_load, mock_file_open):
@@ -208,15 +208,15 @@ class TestWorkflowEngineExecution(unittest.TestCase):
         mock_openai_instance.connect.return_value = True
 
         engine = WorkflowEngine(global_config=self.global_config)
-        
+
         # First call for a connector_id
         connector1 = engine._get_connector("openai", "my_shared_openai", {"api_key": "key1"})
         MockOpenAI.assert_called_once_with(api_key="key1") # Instantiated with specific config
         connector1.connect.assert_called_once()
-        
+
         # Second call for the same connector_id
         connector2 = engine._get_connector("openai", "my_shared_openai", {"api_key": "key2"}) # Config ignored
-        
+
         self.assertIs(connector1, connector2) # Should be the same instance
         MockOpenAI.assert_called_once() # Still only one instantiation
         connector1.connect.assert_called_once() # Connect should not be called again if already connected (depends on connector's connect)

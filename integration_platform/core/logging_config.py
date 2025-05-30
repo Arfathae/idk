@@ -19,7 +19,7 @@ def setup_logging(level=logging.INFO):
         # Console Handler
         console_handler = logging.StreamHandler(sys.stdout)
         # Set handler level explicitly, otherwise it might default to NOTSET or WARNING
-        console_handler.setLevel(level) 
+        console_handler.setLevel(level)
 
         # Formatter
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -27,10 +27,10 @@ def setup_logging(level=logging.INFO):
 
         root_logger.addHandler(console_handler)
         # Use the root_logger or a specific logger for this initial message
-        logging.info("Root logger configured.") 
+        logging.info("Root logger configured.")
     else:
         logging.info("Root logger already configured or has handlers.")
-    
+
     # Return a specific logger for convenience if needed, or just let modules use getLogger(__name__)
     return logging.getLogger("IntegrationPlatform") # Or return root_logger
 

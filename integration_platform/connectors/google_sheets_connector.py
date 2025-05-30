@@ -69,7 +69,7 @@ class GoogleSheetsConnector(BaseConnector):
         """
         logger.info("Attempting to connect to Google Sheets API...")
         self.creds = None
-        
+
         # Check if Google libraries were imported successfully at the module level
         # This check is more for code clarity; if they weren't, hasattr below would fail anyway.
         try:
@@ -101,7 +101,7 @@ class GoogleSheetsConnector(BaseConnector):
                 except Exception as e:
                     logger.error(f"Failed to refresh token: {e}. Need to re-authenticate.")
                     # Fall through to re-authentication
-                    self.creds = None 
+                    self.creds = None
             else:
                 logger.info("No valid token found or refresh failed. Starting new authentication flow.")
                 if not os.path.exists(self.client_secret_file):
@@ -119,10 +119,10 @@ class GoogleSheetsConnector(BaseConnector):
                     logger.warning("WORKER_NOTE: User interaction required for OAuth2 flow.")
                     logger.warning(f"WORKER_NOTE: Please run this application in an environment where you can authorize access via a web browser.")
                     logger.warning(f"WORKER_NOTE: The application will attempt to start a local server for authentication. Follow the instructions in your browser.")
-                    
+
                     # Option 1: Run local server (opens browser, user authenticates, server gets token)
                     # self.creds = flow.run_local_server(port=0)
-                    
+
                     # Option 2: Run console (prints URL, user visits, pastes auth code back)
                     # self.creds = flow.run_console()
 
@@ -139,7 +139,7 @@ class GoogleSheetsConnector(BaseConnector):
                     # We cannot proceed to build the service without credentials.
                     # Raising an exception to indicate that authentication is pending.
                     # This error is specific and helps the WorkflowEngine understand the state.
-                    raise ConnectionAbortedError( 
+                    raise ConnectionAbortedError(
                         "OAuth2 authentication required. Please run interactively to generate token file."
                     )
 
@@ -151,7 +151,7 @@ class GoogleSheetsConnector(BaseConnector):
                     raise ConnectionError(f"Could not initiate OAuth2 flow: {e}") from e
 
             # Save the credentials for the next run (if newly obtained/refreshed and valid)
-            if self.creds and self.creds.valid: 
+            if self.creds and self.creds.valid:
                 try:
                     with open(self.token_file_path, 'w') as token_file:
                         token_file.write(self.creds.to_json())
@@ -174,7 +174,7 @@ class GoogleSheetsConnector(BaseConnector):
                 logger.error(f"Failed to build Google Sheets service due to HttpError: {e.resp.status} - {e.content}", exc_info=True)
                 self.service = None
                 raise ConnectionError(f"Failed to build Google Sheets service: {e.resp.status} - {e.content}") from e
-            except Exception as e: 
+            except Exception as e:
                 logger.error(f"An unexpected error occurred while building Google Sheets service: {e}", exc_info=True)
                 self.service = None
                 raise ConnectionError(f"Unexpected error building Google Sheets service: {e}") from e
@@ -185,12 +185,12 @@ class GoogleSheetsConnector(BaseConnector):
                 "Failed to obtain valid Google Sheets credentials. "
                 f"Ensure token file '{self.token_file_path}' is valid or run authentication again."
             )
-        return True 
+        return True
 
     def disconnect(self):
         """Disconnects from Google Sheets by clearing the service object."""
         self.service = None
-        self.creds = None 
+        self.creds = None
         logger.info("Disconnected from Google Sheets. Service and credentials have been cleared.")
 
     def get_sheet_data(self, sheet_id: str, range_name: str) -> list[list[str]]:
@@ -221,7 +221,7 @@ class GoogleSheetsConnector(BaseConnector):
             #     range=range_name
             # ).execute()
             # values = result.get('values', [])
-            
+
             # Check if we are in a simulated environment or if we should attempt real calls
             # This flag is set by the main script or can be set directly for testing.
             is_simulation = os.environ.get("GOOGLE_SHEETS_SIMULATE_API_CALLS", "false").lower() == "true"
@@ -232,14 +232,14 @@ class GoogleSheetsConnector(BaseConnector):
                 if sheet_id == "YOUR_GOOGLE_SHEET_ID_PLACEHOLDER" and \
                    (range_name == "Sheet1!A1:A1" or (isinstance(range_name, str) and range_name.startswith("Sheet1!A1:A1"))): # Allow for dynamic range like A1:monitor_colum1
                     logger.info("Matched simulation condition for placeholder sheet and range A1.")
-                    return [["Simulated Text for Summary"]] 
+                    return [["Simulated Text for Summary"]]
                 elif sheet_id == "test_sheet_id" and range_name == "Sheet1!A1:B2": # Original test case
                     logger.info("Matched simulation condition for 'test_sheet_id'.")
                     return [["Header1", "Header2"], ["Data1", "Data2"]]
                 else:
                     logger.info(f"No specific simulation case matched for get_sheet_data({sheet_id}, {range_name}). Returning empty list.")
                     return []
-            
+
             # Actual API call if not simulating
             logger.info(f"Executing actual API call to get sheet data for sheet_id='{sheet_id}', range='{range_name}'")
             result = self.service.spreadsheets().values().get(
@@ -278,7 +278,7 @@ class GoogleSheetsConnector(BaseConnector):
             A tuple containing:
                 - A list of lists representing the new rows.
                 - The new last_processed_row_index (which is the count of total rows fetched including new ones).
-        
+
         Raises:
             ConnectionError: If not connected.
             Exception: For API or other errors.
@@ -291,16 +291,16 @@ class GoogleSheetsConnector(BaseConnector):
         # Google Sheets rows are 1-indexed.
         start_row = last_processed_row_index + 1
         range_to_fetch = f"{tab_name}!A{start_row}:Z" # Assuming data up to column Z
-        
+
         logger.info(f"Getting new rows from sheet_id='{sheet_id}', tab='{tab_name}', starting after row {last_processed_row_index} (range: {range_to_fetch})")
 
         try:
             new_rows_data = self.get_sheet_data(sheet_id, range_to_fetch)
-            
+
             current_total_rows_in_fetched_range = len(new_rows_data)
             # The new last_processed_row_index will be the original index + number of new rows found.
             new_last_processed_index = last_processed_row_index + current_total_rows_in_fetched_range
-            
+
             if new_rows_data:
                 logger.info(f"Fetched {len(new_rows_data)} new rows. New last_processed_row_index: {new_last_processed_index}")
             else:
@@ -361,7 +361,7 @@ class GoogleSheetsConnector(BaseConnector):
                         "updatedCells": sum(len(row) for row in values)
                     }
                 }
-            
+
             logger.info(f"Executing actual API call to append {len(values)} row(s) to sheet_id='{sheet_id}', tab='{tab_name}'.")
             result = self.service.spreadsheets().values().append(
                 spreadsheetId=sheet_id,
@@ -425,7 +425,7 @@ class GoogleSheetsConnector(BaseConnector):
                     "updatedColumns": len(body_values[0]) if body_values and body_values[0] else 0,
                     "updatedCells": sum(len(row) for row in body_values)
                 }
-            
+
             logger.info(f"Executing actual API call to update cell(s) at sheet_id='{sheet_id}', range='{range_name}'.")
             result = self.service.spreadsheets().values().update(
                 spreadsheetId=sheet_id,
@@ -457,7 +457,7 @@ class GoogleSheetsConnector(BaseConnector):
                            (Add more actions and their params as needed)
         Returns:
             The result of the action, type depends on the action.
-        
+
         Raises:
             ValueError: If action_name is unknown or params are invalid.
             ConnectionError: If not connected.
@@ -474,7 +474,7 @@ class GoogleSheetsConnector(BaseConnector):
                 raise ValueError("Missing 'sheet_id' or 'range_name' for get_sheet_data action.")
             data = self.get_sheet_data(params["sheet_id"], params["range_name"])
             return {"values": data}
-        
+
         elif action_name == "get_new_rows":
             if not all(k in params for k in ["sheet_id", "tab_name"]):
                 raise ValueError("Missing 'sheet_id' or 'tab_name' for get_new_rows action.")
@@ -484,7 +484,7 @@ class GoogleSheetsConnector(BaseConnector):
                 params.get("last_processed_row_index", 0) # .get provides default
             )
             return {"new_rows": new_rows_data, "last_row_index": new_last_index}
-        
+
         elif action_name == "append_row":
             if not all(k in params for k in ["sheet_id", "tab_name", "values"]):
                 raise ValueError("Missing 'sheet_id', 'tab_name', or 'values' for append_row action.")
@@ -508,7 +508,7 @@ if __name__ == '__main__':
 
     # Configure basic logging for the example
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
+
     logger.info("Starting GoogleSheetsConnector example...")
 
     # These paths would typically come from a global config object/file
@@ -519,21 +519,21 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(__file__)
     CLIENT_SECRET_FILE_PATH = os.path.join(script_dir, '..', '..', 'credentials.json') # Assuming it's in project root
     TOKEN_FILE_PATH = os.path.join(script_dir, '..', '..', 'token.json') # Assuming it's in project root
-    
+
     # To make this example runnable if this file is executed directly,
     # and credentials.json is expected in the project root:
     # current_file_dir = os.path.dirname(os.path.abspath(__file__))
     # project_root = os.path.abspath(os.path.join(current_file_dir, '../../..')) # Adjust if structure changes
     # CLIENT_SECRET_FILE_PATH = os.path.join(project_root, 'credentials.json')
     # TOKEN_FILE_PATH = os.path.join(project_root, 'token.json')
-    
+
     # Simplified for now, assuming credentials.json might be placed in the connectors dir for testing
     # or more realistically, paths are managed by a config system.
     # Let's use placeholder names that clearly indicate they need to be correctly set up.
     # For a real run, replace 'path/to/your/credentials.json'
-    # CLIENT_SECRET_FILE_PATH = 'path/to/your/credentials.json' 
-    # TOKEN_FILE_PATH = 'gs_token.json' 
-    
+    # CLIENT_SECRET_FILE_PATH = 'path/to/your/credentials.json'
+    # TOKEN_FILE_PATH = 'gs_token.json'
+
     # This environment variable is referenced by the simulation logic within the methods
     IS_SIMULATION_MODE = os.environ.get("GOOGLE_SHEETS_SIMULATE_API_CALLS", "false").lower() == "true"
     if IS_SIMULATION_MODE:
@@ -563,12 +563,12 @@ if __name__ == '__main__':
         # if token.json is not found or invalid, as it expects user interaction for OAuth.
         # This is normal in such environments for the first run.
         logger.info("__main__: Attempting to connect connector...")
-        connector.connect() 
+        connector.connect()
         logger.info("__main__: Connector connect() call completed.")
 
         if connector.service or IS_SIMULATION_MODE: # If service exists or we are simulating calls
             logger.info("__main__: Google Sheets Service is available or in simulation mode. Proceeding with example actions.")
-            
+
             sheet_id_to_test = "YOUR_GOOGLE_SHEET_ID_PLACEHOLDER" if IS_SIMULATION_MODE else "your_ACTUAL_sheet_id_here_for_read"
             range_to_test_read = "Sheet1!A1:A1" if IS_SIMULATION_MODE else "Sheet1!A1:B2" # Adjust for real tests
 
@@ -578,7 +578,7 @@ if __name__ == '__main__':
                 logger.info(f"__main__: 'get_sheet_data' result: {data_result}")
             except Exception as e_action:
                 logger.error(f"__main__: Error during 'get_sheet_data' action: {e_action}", exc_info=True)
-            
+
             # Write operations - use with extreme caution if not in simulation mode.
             # These examples are typically commented out or use specific test sheets.
             sheet_id_to_test_write = "YOUR_TEST_SPREADSHEET_ID_FOR_WRITES" # IMPORTANT: Use a test sheet ID!
@@ -607,24 +607,24 @@ if __name__ == '__main__':
                     logger.info(f"__main__: Simulated 'update_cell' result: {update_result}")
                 except Exception as e_action:
                     logger.error(f"__main__: Error during simulated 'update_cell' action: {e_action}", exc_info=True)
-        else: 
+        else:
             logger.warning("__main__: Google Sheets service not available and not in simulation mode. Skipping example actions.")
 
-    except ConnectionAbortedError as e_auth: 
+    except ConnectionAbortedError as e_auth:
         logger.warning(f"__main__: Authentication required and could not be completed automatically: {e_auth}")
         logger.warning("__main__: This is expected in non-interactive environments if 'token.json' is missing/invalid.")
-    except FileNotFoundError as e_fnf: 
+    except FileNotFoundError as e_fnf:
         logger.error(f"__main__: Configuration file error: {e_fnf}. Ensure '{CREDENTIALS_FILE}' (or specified path) is present.", exc_info=True)
-    except ConnectionError as e_conn: 
+    except ConnectionError as e_conn:
         logger.error(f"__main__: Connection failed: {e_conn}", exc_info=True)
-    except ImportError as e_imp: 
+    except ImportError as e_imp:
         logger.error(f"__main__: Import error: {e_imp}. Ensure Google client libraries are installed.", exc_info=True)
-    except HttpError as e_http: 
+    except HttpError as e_http:
         logger.error(f"__main__: Google API HTTP Error: {e_http.resp.status} - {e_http.content}", exc_info=True)
-    except Exception as e_main: 
+    except Exception as e_main:
         logger.error(f"__main__: An unexpected error occurred: {e_main}", exc_info=True)
     finally:
-        if connector: 
+        if connector:
             logger.info("__main__: Attempting to disconnect connector in finally block.")
             connector.disconnect()
 

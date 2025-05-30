@@ -16,7 +16,7 @@ class EmailConnector(BaseConnector):
     Handles connection, authentication, and email sending.
     """
 
-    def __init__(self, smtp_host: str, smtp_port: int, smtp_user: str, smtp_password: str, 
+    def __init__(self, smtp_host: str, smtp_port: int, smtp_user: str, smtp_password: str,
                  sender_email: str = None, use_tls: bool = True):
         """
         Initializes the EmailConnector.
@@ -72,7 +72,7 @@ class EmailConnector(BaseConnector):
                     self.server.starttls()
                     logger.info("STARTTLS successful.")
                     self.server.ehlo() # Re-identify after TLS
-            
+
             logger.info(f"Attempting to login as user '{self.smtp_user}'...")
             self.server.login(self.smtp_user, self.smtp_password)
             logger.info(f"Successfully logged in as '{self.smtp_user}'. SMTP connection established.")
@@ -86,17 +86,17 @@ class EmailConnector(BaseConnector):
             raise ConnectionError(f"SMTP authentication failed for user '{self.smtp_user}': {e.smtp_code} - {e.smtp_error}") from e
         except smtplib.SMTPHeloError as e: # Server didn't respond to HELO/EHLO
             logger.error(f"SMTP Helo/Ehlo Error with {self.smtp_host}:{self.smtp_port}. Code: {e.smtp_code}, Error: {e.smtp_error}", exc_info=True)
-            if self.server: try: self.server.quit() 
+            if self.server: try: self.server.quit()
             except: pass
             self.server = None
             raise ConnectionError(f"SMTP server did not respond properly to HELO/EHLO: {e.smtp_code} - {e.smtp_error}") from e
         except smtplib.SMTPException as e: # Other SMTP specific errors
             logger.error(f"SMTP Exception during connection/login to {self.smtp_host}:{self.smtp_port}: {e}", exc_info=True)
-            if self.server: try: self.server.quit() 
+            if self.server: try: self.server.quit()
             except: pass
-            self.server = None 
+            self.server = None
             raise ConnectionError(f"SMTP error connecting or logging in to {self.smtp_host}:{self.smtp_port}: {e}") from e
-        except ConnectionRefusedError as e: 
+        except ConnectionRefusedError as e:
             logger.error(f"Connection refused by SMTP server {self.smtp_host}:{self.smtp_port}: {e}", exc_info=True)
             self.server = None
             raise ConnectionError(f"Connection refused by SMTP server {self.smtp_host}:{self.smtp_port}.") from e
@@ -104,9 +104,9 @@ class EmailConnector(BaseConnector):
             logger.error(f"OS error connecting to SMTP server {self.smtp_host}:{self.smtp_port}: {e}", exc_info=True)
             self.server = None
             raise ConnectionError(f"OS error prevented connection to SMTP server {self.smtp_host}:{self.smtp_port}: {e}") from e
-        except Exception as e: 
+        except Exception as e:
             logger.error(f"Unexpected error connecting to SMTP server {self.smtp_host}:{self.smtp_port}: {e}", exc_info=True)
-            if self.server: try: self.server.quit() 
+            if self.server: try: self.server.quit()
             except: pass
             self.server = None
             raise ConnectionError(f"An unexpected error occurred while connecting to SMTP: {e}") from e
@@ -178,16 +178,16 @@ class EmailConnector(BaseConnector):
                 raise # Re-raise the connection error to the caller
 
         logger.info(f"Attempting to send email to: {recipient_email}, Subject: '{subject}'")
-        
+
         msg = MIMEMultipart() if is_html else MIMEText(body, 'plain' if not is_html else 'html', 'utf-8')
-        
+
         if is_html: # If MIMEMultipart was chosen for HTML
             msg.attach(MIMEText(body, 'html', 'utf-8'))
 
         msg['Subject'] = subject
         msg['From'] = self.sender_email
         msg['To'] = recipient_email
-        
+
         # Simulation mode for environments where actual email sending is not desired/configured
         is_simulation = os.environ.get("EMAIL_SIMULATE", "false").lower() == "true"
         if is_simulation:
@@ -252,7 +252,7 @@ class EmailConnector(BaseConnector):
         if action_name == "send_email":
             if not all(k in params for k in ["recipient_email", "subject", "body"]):
                 raise ValueError("Missing 'recipient_email', 'subject', or 'body' for 'send_email' action.")
-            
+
             try:
                 success = self.send_email(
                     recipient_email=params["recipient_email"],
@@ -290,16 +290,16 @@ if __name__ == '__main__':
     # If run via `python -m integration_platform.main`, logging is already set up.
     if not logging.getLogger().hasHandlers():
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
+
     logger.info("Starting EmailConnector __main__ example...")
 
     is_simulation_main = os.environ.get("EMAIL_SIMULATE", "false").lower() == "true"
-    
+
     smtp_host_main = os.environ.get("SMTP_HOST")
     smtp_port_str_main = os.environ.get("SMTP_PORT")
     smtp_user_main = os.environ.get("SMTP_USER")
     smtp_password_main = os.environ.get("SMTP_PASSWORD")
-    sender_email_main = os.environ.get("SENDER_EMAIL_FOR_TEST", smtp_user_main) 
+    sender_email_main = os.environ.get("SENDER_EMAIL_FOR_TEST", smtp_user_main)
     recipient_email_test_main = os.environ.get("RECIPIENT_EMAIL_FOR_TEST")
 
     connector_main_email = None # Ensure defined for finally
@@ -325,11 +325,11 @@ if __name__ == '__main__':
                 smtp_user=smtp_user_main,
                 smtp_password=smtp_password_main,
                 sender_email=sender_email_main,
-                use_tls=(smtp_port_main != 465) 
+                use_tls=(smtp_port_main != 465)
             )
         except ValueError:
             logger.error(f"__main__: Invalid SMTP_PORT: '{smtp_port_str_main}'. Must be an integer.", exc_info=True)
-    
+
     if connector_main_email:
         try:
             # Explicit connect test (only if not simulating and all params are notionally present)
@@ -337,16 +337,16 @@ if __name__ == '__main__':
                 logger.info("__main__: Attempting to connect to SMTP server explicitly...")
                 connector_main_email.connect()
                 logger.info("__main__: Explicit connection successful.")
-            
+
             test_subject = "Integration Platform Test Email"
             test_body = "This is a test email from the EmailConnector's __main__ block."
-            
+
             logger.info(f"__main__: Attempting 'send_email' action to '{recipient_email_test_main or 'sim_recipient@example.com'}'...")
-            
+
             result = connector_main_email.execute_action(
                 "send_email",
                 {
-                    "recipient_email": recipient_email_test_main or "sim_recipient@example.com", 
+                    "recipient_email": recipient_email_test_main or "sim_recipient@example.com",
                     "subject": test_subject,
                     "body": test_body
                 }

@@ -29,7 +29,7 @@ class TestEmailConnector(unittest.TestCase):
     def test_connect_smtp_tls_success(self, MockSMTP):
         logger.debug("Running test_connect_smtp_tls_success")
         mock_server = MockSMTP.return_value
-        
+
         self.connector.connect()
 
         MockSMTP.assert_called_once_with(self.smtp_config["smtp_host"], self.smtp_config["smtp_port"], timeout=10)
@@ -42,11 +42,11 @@ class TestEmailConnector(unittest.TestCase):
     def test_connect_smtp_ssl_success(self, MockSMTP_SSL):
         logger.debug("Running test_connect_smtp_ssl_success")
         mock_server = MockSMTP_SSL.return_value
-        
+
         ssl_config = self.smtp_config.copy()
         ssl_config["smtp_port"] = 465
         ssl_config["use_tls"] = False # Typically STARTTLS is not used with SMTP_SSL
-        
+
         connector_ssl = EmailConnector(**ssl_config)
         connector_ssl.connect()
 
@@ -70,12 +70,12 @@ class TestEmailConnector(unittest.TestCase):
     def test_send_email_success(self, MockSMTP):
         logger.debug("Running test_send_email_success")
         # Assume connector is connected
-        self.connector.server = MockSMTP.return_value 
-        
+        self.connector.server = MockSMTP.return_value
+
         recipient = "receiver@example.com"
         subject = "Test Subject"
         body = "This is the body."
-        
+
         result_dict = self.connector.execute_action("send_email", {
             "recipient_email": recipient, "subject": subject, "body": body
         })
@@ -100,7 +100,7 @@ class TestEmailConnector(unittest.TestCase):
 
         params = {"recipient_email": "r@ex.com", "subject": "S", "body": "B"}
         result = self.connector.execute_action("send_email", params)
-        
+
         self.assertEqual(result["status"], "failed")
         self.assertIn("Test SMTP error", result["error"])
 
@@ -111,15 +111,15 @@ class TestEmailConnector(unittest.TestCase):
         # In simulation mode, connect() might not even be called by send_email
         # but if it were, we don't want real SMTP.
         # The actual send_email method should bypass SMTP calls.
-        
+
         params = {"recipient_email": "sim_rec@ex.com", "subject": "Sim Subject", "body": "Sim Body"}
-        
+
         # Capture logger output for simulation
         with self.assertLogs(logger='integration_platform.connectors.email_connector', level='INFO') as cm:
             result = self.connector.execute_action("send_email", params)
-        
+
         self.assertEqual(result, {"status": "sent"}) # Simulation is considered a "success" in terms of execution
-        
+
         # Check logs for simulation details
         self.assertTrue(any("SIMULATING email sending" in log_msg for log_msg in cm.output))
         self.assertTrue(any("From: sender@example.com" in log_msg for log_msg in cm.output)) # Checks sender_email from setUp

@@ -62,14 +62,14 @@ class TestOpenAIConnector(unittest.TestCase):
 
         connector = OpenAIConnector(api_key="fake_key")
         # connector.connect() # Client is initialized in __init__ due to fake_key
-        
+
         params = {"prompt": "Summarize this", "model": "gpt-3.5-turbo", "max_tokens": 200, "temperature": 0.5}
         result = connector.execute_action("generate_text", params)
 
         mock_client_instance.chat.completions.create.assert_called_once_with(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": "Summarize this"}],
-            max_tokens=200, 
+            max_tokens=200,
             temperature=0.5
         )
         self.assertEqual(result, {"generated_text": "Generated summary"})
@@ -102,7 +102,7 @@ class TestOpenAIConnector(unittest.TestCase):
         logger.debug("Running test_generate_text_authentication_error")
         mock_client_instance = MockOpenAI.return_value
         mock_client_instance.chat.completions.create.side_effect = AuthenticationError("Invalid API Key", request=MagicMock(), body=None)
-        
+
         connector = OpenAIConnector(api_key="fake_key_auth_error")
         # connector.connect()
 
@@ -118,13 +118,13 @@ class TestOpenAIConnector(unittest.TestCase):
         """Test AuthenticationError during client instantiation in __init__."""
         logger.debug("Running test_init_with_auth_error_on_client_creation")
         MockOpenAIClient.side_effect = AuthenticationError("Invalid API Key from init", request=MagicMock(), body=None)
-        
+
         # The connector's __init__ tries to create the client if api_key is provided.
         # It catches generic Exception and logs, but doesn't re-raise.
         # To test this properly, the connector's __init__ should perhaps re-raise or set a failed state.
         # For now, let's assume the test wants to see if the client is None after such an error.
         # Or, if connect() is called, it should then raise the error.
-        
+
         # As per current connector, __init__ logs the error and self.client remains None.
         # The error would then be raised upon connect() or an action call.
         connector = OpenAIConnector(api_key="bad_key_init")
@@ -143,15 +143,15 @@ class TestOpenAIConnector(unittest.TestCase):
         connector = OpenAIConnector(api_key="fake_key_unknown_action")
         with self.assertRaisesRegex(ValueError, "Unknown action: unknown_action"):
             connector.execute_action("unknown_action", {})
-            
+
     def test_generate_text_simulation_mode(self):
         """Test text generation in simulation mode."""
         logger.debug("Running test_generate_text_simulation_mode")
         with patch.dict(os.environ, {"OPENAI_API_SIMULATE": "true"}):
             # No need to mock OpenAI client if simulation is effective before client usage
-            connector = OpenAIConnector(api_key="sim_key") 
+            connector = OpenAIConnector(api_key="sim_key")
             # connector.connect() # Connect might still try to init client, but generate_text should simulate
-            
+
             params = {"prompt": "Test simulation"}
             result = connector.execute_action("generate_text", params)
             self.assertIn("simulated response", result.get("generated_text", ""))

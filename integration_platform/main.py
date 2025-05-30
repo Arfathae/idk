@@ -52,10 +52,10 @@ def main():
         # Google Sheets Connector Config
         "GOOGLE_CLIENT_SECRET_FILE": os.getenv("GOOGLE_CLIENT_SECRET_FILE"), # e.g., "credentials.json"
         "GOOGLE_TOKEN_FILE_PATH": os.getenv("GOOGLE_TOKEN_FILE_PATH"),          # e.g., "token.json"
-        
+
         # OpenAI Connector Config
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
-        
+
         # Email Connector Config
         "SMTP_HOST": os.getenv("SMTP_HOST"),
         "SMTP_PORT": os.getenv("SMTP_PORT"), # Ensure this is cast to int in the engine or connector
@@ -68,7 +68,7 @@ def main():
         "EMAIL_SIMULATE": os.getenv("EMAIL_SIMULATE", "false"),
         "GOOGLE_SHEETS_SIMULATE_API_CALLS": os.getenv("GOOGLE_SHEETS_SIMULATE_API_CALLS", "false"), # For GSheets connector specific simulation
     }
-    
+
     # Filter out None values to only pass explicitly set environment variables or workflow-defined defaults
     global_config = {k: v for k, v in global_config.items() if v is not None}
 
@@ -92,7 +92,7 @@ def main():
     try:
         logger.info(f"Initializing WorkflowEngine and running workflow: {workflow_file_path}")
         workflow_results = engine.run_workflow(workflow_file_path)
-        
+
         logger.info("Workflow execution completed.")
         print("\n--- Workflow Execution Results ---")
         try:
@@ -108,7 +108,7 @@ def main():
                 if isinstance(result_data, dict) and "error" in result_data: # Check 'result_data'
                     logger.error(f"Error reported in workflow step '{step_id}': {result_data['error']}")
                     has_errors = True
-        
+
         if has_errors:
             logger.warning("Workflow execution completed with one or more errors reported by steps.")
             # User-facing print for this important status
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     # To enable simulation for all relevant connectors:
     # export OPENAI_API_SIMULATE="true"
     # export EMAIL_SIMULATE="true"
-    # export GOOGLE_SHEETS_SIMULATE_API_CALLS="true" 
-    # python -m integration_platform.main 
+    # export GOOGLE_SHEETS_SIMULATE_API_CALLS="true"
+    # python -m integration_platform.main
 
     main()

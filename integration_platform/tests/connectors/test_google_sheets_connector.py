@@ -54,14 +54,14 @@ class TestGoogleSheetsConnector(unittest.TestCase):
     def test_connect_with_existing_valid_token(self, mock_os_exists, mock_build, MockCredentials):
         logger.debug("Running test_connect_with_existing_valid_token")
         mock_os_exists.return_value = True  # Assume token file exists
-        
+
         mock_creds_instance = MockCredentials.from_authorized_user_file.return_value
         mock_creds_instance.valid = True
         mock_creds_instance.expired = False
         mock_creds_instance.refresh_token = "some_refresh_token"
 
         mock_service = mock_build.return_value
-        
+
         connector = GoogleSheetsConnector(**self.connector_params)
         connector.connect()
 
@@ -77,7 +77,7 @@ class TestGoogleSheetsConnector(unittest.TestCase):
     def test_connect_with_expired_token_refresh_success(self, mock_os_exists, mock_build, MockCredentials):
         logger.debug("Running test_connect_with_expired_token_refresh_success")
         mock_os_exists.return_value = True # Token file exists
-        
+
         mock_creds_instance = MockCredentials.from_authorized_user_file.return_value
         mock_creds_instance.valid = False # Initially invalid
         mock_creds_instance.expired = True
@@ -88,7 +88,7 @@ class TestGoogleSheetsConnector(unittest.TestCase):
         def side_effect_refresh(request):
             mock_creds_instance.valid = True
         mock_creds_instance.refresh.side_effect = side_effect_refresh
-        
+
         connector = GoogleSheetsConnector(**self.connector_params)
         connector.connect()
 
@@ -107,11 +107,11 @@ class TestGoogleSheetsConnector(unittest.TestCase):
 
         mock_flow_instance = MockInstalledAppFlow.from_client_secrets_file.return_value
         # Connector raises ConnectionAbortedError because run_local_server would block/require interaction
-        
+
         connector = GoogleSheetsConnector(**self.connector_params)
         with self.assertRaises(ConnectionAbortedError):
             connector.connect()
-        
+
         MockInstalledAppFlow.from_client_secrets_file.assert_called_once_with(
             self.connector_params["client_secret_file"], connector.SCOPES
         )
@@ -129,11 +129,11 @@ class TestGoogleSheetsConnector(unittest.TestCase):
         # This helper assumes Credentials and os.path.exists are also patched by the caller if needed for connect()
         mock_service = MagicMock()
         mock_build_sheets.return_value = mock_service # mock_build('sheets', 'v4').return_value = mock_service
-        
+
         # Mock credentials part of connect() to avoid full auth flow
         with patch('integration_platform.connectors.google_sheets_connector.Credentials') as MockCreds, \
              patch('os.path.exists', return_value=True): # Assume token file exists and is valid
-            
+
             mock_creds_instance = MockCreds.from_authorized_user_file.return_value
             mock_creds_instance.valid = True
             mock_creds_instance.expired = False
@@ -147,7 +147,7 @@ class TestGoogleSheetsConnector(unittest.TestCase):
     def test_get_sheet_data_success(self, mock_build_sheets_module_level):
         logger.debug("Running test_get_sheet_data_success")
         connector, mock_service = self._setup_connected_connector(mock_build_sheets_module_level)
-        
+
         mock_sheet_values = mock_service.spreadsheets().values().get().execute
         mock_sheet_values.return_value = {"values": [["Data1", "Data2"]]}
 
@@ -164,7 +164,7 @@ class TestGoogleSheetsConnector(unittest.TestCase):
     def test_get_sheet_data_http_error(self, mock_build_sheets):
         logger.debug("Running test_get_sheet_data_http_error")
         connector, mock_service = self._setup_connected_connector(mock_build_sheets)
-        
+
         # Simulate HttpError
         # The HttpError needs a `resp` (like a dict with 'status') and `content`
         mock_resp = MagicMock()
@@ -183,16 +183,16 @@ class TestGoogleSheetsConnector(unittest.TestCase):
     def test_append_row_success(self, mock_build_sheets):
         logger.debug("Running test_append_row_success")
         connector, mock_service = self._setup_connected_connector(mock_build_sheets)
-        
+
         mock_append_response = {"updates": {"updatedRange": "Sheet1!A10:B10"}}
         mock_service.spreadsheets().values().append().execute.return_value = mock_append_response
-        
+
         params = {"sheet_id": "s_id", "tab_name": "Sheet1", "values": [["val1", "val2"]]}
         result = connector.execute_action("append_row", params)
 
         mock_service.spreadsheets().values().append.assert_called_once_with(
             spreadsheetId="s_id",
-            range="Sheet1", 
+            range="Sheet1",
             valueInputOption='USER_ENTERED',
             insertDataOption='INSERT_ROWS',
             body={'values': [["val1", "val2"]]}
@@ -209,7 +209,7 @@ class TestGoogleSheetsConnector(unittest.TestCase):
 
         params = {"sheet_id": "s_id", "range_name": "Sheet1!A1", "value": "NewValue"}
         result = connector.execute_action("update_cell", params)
-        
+
         mock_service.spreadsheets().values().update.assert_called_once_with(
             spreadsheetId="s_id",
             range="Sheet1!A1",

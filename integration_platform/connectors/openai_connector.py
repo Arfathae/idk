@@ -46,7 +46,7 @@ class OpenAIConnector(BaseConnector):
                 logger.info("OpenAI client initialized with explicitly provided API key.")
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client with provided API key: {e}", exc_info=True)
-                self.client = None 
+                self.client = None
         else:
             logger.info("OpenAI API key not provided during init. Will attempt to load from environment during connect phase.")
 
@@ -78,7 +78,7 @@ class OpenAIConnector(BaseConnector):
                     "OpenAI API key is required. Set via OPENAI_API_KEY environment variable or pass to constructor."
                 )
             logger.info("Successfully loaded OpenAI API key from environment variable.")
-        
+
         try:
             # Ensure openai module and OpenAI class are available
             if 'openai' not in globals() or not hasattr(openai, 'OpenAI'):
@@ -165,7 +165,7 @@ class OpenAIConnector(BaseConnector):
             if completion.choices and completion.choices[0].message and completion.choices[0].message.content:
                 generated_text = completion.choices[0].message.content.strip()
                 logger.info(f"Successfully generated text using model {model}. Output length: {len(generated_text)}.")
-                return generated_text 
+                return generated_text
             else:
                 logger.error("OpenAI API response structure is invalid: Missing choices, message, or content.")
                 raise Exception("Invalid response structure from OpenAI API: choices, message, or content missing.")
@@ -176,14 +176,14 @@ class OpenAIConnector(BaseConnector):
         except openai.RateLimitError as e:
             logger.error(f"OpenAI API Rate Limit Exceeded: {e}", exc_info=True)
             raise Exception(f"OpenAI API request exceeded rate limit: {e}") from e # Consider a custom exception
-        except openai.AuthenticationError as e: 
+        except openai.AuthenticationError as e:
             logger.error(f"OpenAI API Authentication Error during text generation: {e}. Key may have been revoked or is invalid.", exc_info=True)
             self.client = None # Force re-authentication attempt on next call
             raise ConnectionError(f"OpenAI API authentication failed: {e}. Check your API key.") from e
         except openai.APIError as e: # General OpenAI API error (e.g. server errors)
             logger.error(f"OpenAI API Error (APIError): Status {e.status_code}, Type: {e.type}, Message: {e.message}", exc_info=True)
             raise Exception(f"An OpenAI API error occurred: Status {e.status_code}, Type: {e.type}, Message: {e.message}") from e
-        except Exception as e: 
+        except Exception as e:
             logger.error(f"Unexpected error during OpenAI text generation: {e}", exc_info=True)
             raise Exception(f"An unexpected error occurred while generating text with OpenAI: {e}") from e
 
@@ -211,7 +211,7 @@ class OpenAIConnector(BaseConnector):
         if action_name == "generate_text":
             if "prompt" not in params:
                 raise ValueError("Missing 'prompt' parameter for 'generate_text' action.")
-            
+
             prompt = params["prompt"]
             model = params.get("model", "gpt-3.5-turbo") # Default model
             max_tokens = params.get("max_tokens", 150)
@@ -248,7 +248,7 @@ if __name__ == '__main__':
     # If run via `python -m integration_platform.main`, logging is already set up by main.py.
     if not logging.getLogger().hasHandlers(): # Check if root logger has handlers
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
+
     logger.info("Starting OpenAIConnector __main__ example...")
 
     api_key_from_env = os.environ.get("OPENAI_API_KEY")
@@ -270,14 +270,14 @@ if __name__ == '__main__':
     if connector_main:
         try:
             logger.info("__main__: Attempting to connect OpenAI connector...")
-            connector_main.connect() 
+            connector_main.connect()
             logger.info("__main__: OpenAI connector connect() call completed.")
 
             # Check if client is available OR if simulation is globally on (via env var that generate_text checks)
             if connector_main.client or os.environ.get("OPENAI_API_SIMULATE", "false").lower() == "true":
                 prompt_to_test = "Describe the benefits of using Python for automation in three bullet points."
                 logger.info(f"__main__: Attempting 'generate_text' action with prompt: \"{prompt_to_test[:30]}...\"")
-                
+
                 generated_text_dict = connector_main.execute_action(
                     "generate_text",
                     {"prompt": prompt_to_test, "model": "gpt-3.5-turbo"}
