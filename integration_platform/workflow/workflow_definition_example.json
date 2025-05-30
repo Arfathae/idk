@@ -1,0 +1,49 @@
+{
+  "name": "Sample Google Sheet Row Processing Workflow",
+  "trigger": {
+    "id": "gsheet_new_row_trigger",
+    "service": "google_sheets",
+    "event": "new_row",
+    "config": {
+      "sheet_id": "YOUR_GOOGLE_SHEET_ID_PLACEHOLDER",
+      "tab_name": "Sheet1",
+      "monitor_column": "A"
+    }
+  },
+  "actions": [
+    {
+      "id": "get_gsheet_data",
+      "service": "google_sheets",
+      "action": "get_sheet_data",
+      "connector_id": "gsheet_reader_connector",
+      "connector_config": {},
+      "config": {
+        "sheet_id": "{gsheet_new_row_trigger.config.sheet_id}",
+        "range_name": "{gsheet_new_row_trigger.config.tab_name}!A{gsheet_new_row_trigger.data.new_row_number}:{gsheet_new_row_trigger.config.monitor_column}{gsheet_new_row_trigger.data.new_row_number}"
+      }
+    },
+    {
+      "id": "openai_generate_summary",
+      "service": "openai",
+      "action": "generate_text",
+      "connector_id": "openai_connector_default",
+      "connector_config": {},
+      "config": {
+        "prompt": "Extract the key information from this text: {get_gsheet_data.values[0][0]}",
+        "model": "gpt-3.5-turbo"
+      }
+    },
+    {
+      "id": "send_summary_email",
+      "service": "email",
+      "action": "send_email",
+      "connector_id": "email_connector_default",
+      "connector_config": {},
+      "config": {
+        "recipient_email": "YOUR_RECIPIENT_EMAIL_PLACEHOLDER",
+        "subject": "Workflow Alert: New Data Processed from {gsheet_new_row_trigger.config.sheet_id}",
+        "body": "Summary of new data: {openai_generate_summary.generated_text}"
+      }
+    }
+  ]
+}

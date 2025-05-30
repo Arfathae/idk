@@ -1,0 +1,28 @@
+# Example Configuration File
+# Copy this file to config.py and fill in your actual API keys and settings.
+# Do NOT commit config.py to version control if it contains sensitive credentials.
+
+# OpenAI API Key
+# OPENAI_API_KEY = "your_openai_api_key_here"
+
+# Google Cloud / Sheets API Credentials
+# GOOGLE_APPLICATION_CREDENTIALS = "path/to/your/google_service_account_key.json"
+# Or individual components if preferred:
+# GOOGLE_CLIENT_ID = "your_google_client_id"
+# GOOGLE_CLIENT_SECRET = "your_google_client_secret"
+# GOOGLE_PROJECT_ID = "your_google_project_id"
+
+# Email Service Configuration (example for SMTP)
+# EMAIL_SMTP_SERVER = "smtp.example.com"
+# EMAIL_SMTP_PORT = 587
+# EMAIL_USERNAME = "your_email_username"
+# EMAIL_PASSWORD = "your_email_password"
+# EMAIL_SENDER_ADDRESS = "sender@example.com"
+
+# Logging Level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOGGING_LEVEL = "INFO"
+
+# Workflow Definitions Path (if storing them centrally)
+# WORKFLOW_DEFINITIONS_DIR = "path/to/your/workflow_definitions/"
+
+print("config.py.example loaded (this is a template, copy to config.py)")
