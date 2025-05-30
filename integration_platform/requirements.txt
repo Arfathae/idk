@@ -8,5 +8,8 @@ google-auth-httplib2 # Often a peer dependency for google-auth
 # OpenAI API Client Library
 openai
 
+# Web Framework
+Flask>=2.0
+
 # Other libraries will be added here as needed
 # e.g., requests, etc.

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Integration Platform</h1>
+    </header>
+    <main>
+        <p>Welcome to the workflow automation and service integration platform.</p>
+
+        <section id="workflow-runner">
+            <h2>Run Workflow</h2>
+            <button id="runWorkflowButton">Run Example Workflow</button>
+            <p>Click the button above to execute the predefined example workflow. Results will be displayed below.</p>
+        </section>
+
+        <section id="results-display">
+            <h2>Workflow Results:</h2>
+            <pre id="workflowResultsOutput">
+                Workflow results will appear here after execution.
+            </pre>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Integration Platform</p>
+    </footer>
+
+    <!-- JavaScript for interaction will be added in a later step -->
+    <!-- <script src="{{ url_for('static', filename='script.js') }}"></script> -->
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const runButton = document.getElementById('runWorkflowButton');
+            const resultsOutput = document.getElementById('workflowResultsOutput');
+
+            if (runButton && resultsOutput) {
+                runButton.addEventListener('click', function () {
+                    resultsOutput.textContent = 'Running workflow, please wait...';
+                    runButton.disabled = true; // Disable button during execution
+                    runButton.style.opacity = 0.7; // Visual feedback for disabled state
+
+                    fetch('/api/workflow/run', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json', // Good practice for POST
+                            // 'Accept': 'application/json' // Client expects JSON back
+                        }
+                        // No body is sent for this specific endpoint as it runs a predefined workflow on the server.
+                        // If the API were to accept a workflow definition or params in the body:
+                        // body: JSON.stringify({ workflow_path: "path/to/dynamic_workflow.json" })
+                    })
+                    .then(response => {
+                        // Store status for versatile error handling
+                        const status = response.status;
+                        // Try to parse as JSON first, regardless of ok status, as error might be JSON
+                        return response.json().catch(jsonError => {
+                            // If JSON parsing fails, try to get plain text (for non-JSON error responses)
+                            return response.text().then(textData => {
+                                // Construct an error object that includes the status and potentially text data
+                                let error = new Error(`HTTP error ${status}. Response body could not be parsed as JSON.`);
+                                error.status = status;
+                                error.data = textData; // Store raw text data
+                                error.isJsonResponse = false;
+                                throw error; // Throw this more informative error
+                            });
+                        }).then(jsonData => {
+                            if (!response.ok) {
+                                // If response was not ok, but was valid JSON
+                                let error = new Error(`HTTP error ${status}: ${jsonData.error_message || JSON.stringify(jsonData)}`);
+                                error.status = status;
+                                error.data = jsonData; // Store parsed JSON error data
+                                error.isJsonResponse = true;
+                                throw error;
+                            }
+                            return jsonData; // This is the success case
+                        });
+                    })
+                    .then(data => {
+                        resultsOutput.textContent = JSON.stringify(data, null, 2);
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error);
+                        let errorMessage = 'Error running workflow: ' + error.message;
+                        if (error.data) { // If we have more details from the response
+                            if (error.isJsonResponse) {
+                                errorMessage += `\nDetails: ${JSON.stringify(error.data, null, 2)}`;
+                            } else {
+                                errorMessage += `\nServer response: ${error.data}`;
+                            }
+                        }
+                        resultsOutput.textContent = errorMessage;
+                        resultsOutput.style.color = 'red'; // Make error more visible
+                    })
+                    .finally(() => {
+                        runButton.disabled = false; // Re-enable button
+                        runButton.style.opacity = 1.0;
+                    });
+                });
+            } else {
+                console.error('Required page elements (runWorkflowButton or workflowResultsOutput) not found.');
+                if(resultsOutput) { // If only resultsOutput exists, show error there
+                    resultsOutput.textContent = 'Initialization error: Page elements missing. Cannot run workflow.';
+                    resultsOutput.style.color = 'red';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

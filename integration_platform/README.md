@@ -16,6 +16,7 @@ The Integration Platform is a Python-based system for orchestrating workflows by
 *   **Data Templating:** Pass data between workflow trigger and actions using a simple `{step_id.path.to.value}` syntax (e.g., `{trigger.data.message}`, `{action1.output.summary}`).
 *   **Configuration:** Primarily through environment variables for API keys, credentials, and service details. Workflow-specific configurations can also be embedded in the JSON definition.
 *   **Simulation Modes:** Each connector supports a simulation mode (enabled by environment variables) for testing workflow logic without making actual external API calls.
+*   **Basic Web Interface:** A Flask-based web application allows triggering a predefined workflow and viewing results in the browser.
 *   **Logging:** Comprehensive logging throughout the platform for execution tracing and debugging.
 *   **Error Handling:** Structured error reporting within the workflow execution, capturing issues from connectors or the engine itself.
 *   **Unit Tested:** Core components, including connectors and workflow data resolution, are covered by unit tests.
@@ -23,13 +24,18 @@ The Integration Platform is a Python-based system for orchestrating workflows by
 ## Directory Structure
 
 *   `integration_platform/`
-    *   `connectors/`: Contains modules for connecting to external services (e.g., `GoogleSheetsConnector`, `OpenAIConnector`, `EmailConnector`). Each connector inherits from `BaseConnector`.
+    *   `app.py`: Main Flask application file for the web interface.
+    *   `connectors/`: Modules for connecting to external services (e.g., `GoogleSheetsConnector`, `OpenAIConnector`, `EmailConnector`). Each connector inherits from `BaseConnector`.
     *   `core/`: Core components like data mapping logic (`data_mapper.py` - currently a placeholder) and logging configuration (`logging_config.py`).
+    *   `static/`: Static files for the web application (CSS, JavaScript).
+        *   `style.css`: Basic stylesheet for the web interface.
+    *   `templates/`: HTML templates used by the Flask application.
+        *   `index.html`: The main page for the web interface.
     *   `workflow/`: Modules for defining and executing workflows, including the `WorkflowEngine` and example workflow definitions (`workflow_definition_example.json`).
     *   `tests/`: Unit tests for the platform's components.
         *   `connectors/`: Tests specific to each connector.
         *   `workflow/`: Tests for the workflow engine and related utilities.
-    *   `main.py`: The main script to initialize the `WorkflowEngine` and run workflows from the command line.
+    *   `main.py`: Command-line script to initialize the `WorkflowEngine` and run workflows.
     *   `requirements.txt`: Lists project dependencies.
     *   `README.md`: This file.
     *   `config.py.example`: An example of how a Python-based config file could look (not currently used, environment variables are preferred).
@@ -96,9 +102,9 @@ Set these environment variables to `"true"` to enable simulation mode for the re
 *   `OPENAI_API_SIMULATE=true`
 *   `EMAIL_SIMULATE=true`
 
-## Running Workflows
+## Running Workflows (Command Line)
 
-Workflows are executed using the `main.py` script.
+Workflows can be executed directly from the command line using the `main.py` script. This is useful for testing, batch processing, or integrating with other shell-based automation.
 
 *   **Run a specific workflow definition:**
     ```bash
@@ -113,6 +119,51 @@ Workflows are executed using the `main.py` script.
     This will run `integration_platform/workflow/workflow_definition_example.json`.
 
 The script will print the final `workflow_data_cache` to the console, showing the outputs of the trigger and each action. Detailed logs are also printed to the console during execution.
+
+## Running the Web Application
+
+This project includes a basic web interface built with Flask to allow triggering workflows and viewing their results through your browser.
+
+### 1. Environment Variables
+Ensure all necessary environment variables for the services you intend to use in your workflows are set. This includes credentials for Google Sheets, OpenAI, Email (SMTP), and any simulation flags. Refer to the "Configuration" section above for details on required variables.
+
+### 2. Start the Flask Development Server
+Navigate to the root directory of the project (the one containing the `integration_platform` directory) and run:
+```bash
+python integration_platform/app.py
+```
+This will start the Flask development server.
+**Note:** For production environments, use a proper WSGI server like Gunicorn or uWSGI.
+
+### 3. Access the Web Interface
+Open your web browser and go to:
+[http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+
+You should see the home page with a button to run the example workflow. Click the button to execute the workflow and see the results displayed on the page.
+
+## Web API Endpoints
+
+The web application exposes the following API endpoints:
+
+### Run Workflow
+
+*   **Endpoint:** `POST /api/workflow/run`
+*   **Description:** Triggers the execution of the predefined example workflow currently located at `integration_platform/workflow/workflow_definition_example.json`.
+*   **Request Body:** None.
+*   **Success Response (`200 OK`):**
+    *   A JSON object representing the `workflow_data_cache`, containing the results and status of each step in the executed workflow.
+    ```json
+    {
+      "trigger_id": { "...trigger data and config..." },
+      "action_id_1": { "status": "success", "...action output..." },
+      "action_id_2": { "status": "error", "error_message": "...", "details": "..." }
+      // ... etc.
+    }
+    ```
+*   **Error Responses:**
+    *   `400 Bad Request`: If there's an issue with the workflow definition (e.g., JSON decoding error) or invalid parameters if the endpoint were to accept them. Example: `{"status": "error", "error_message": "Error decoding workflow definition file.", "details": "..."}`
+    *   `404 Not Found`: If the `workflow_definition_example.json` file is not found by the server. Example: `{"status": "error", "error_message": "Workflow definition file not found.", "details": "..."}`
+    *   `500 Internal Server Error`: For general server-side errors during workflow execution (e.g., connection errors to external services, unexpected issues in the engine). Example: `{"status": "error", "error_message": "An unexpected server error occurred.", "details": "..."}` or `{"status": "error", "error_message": "Failed to connect to an external service.", "details": "..."}`
 
 ## Defining Workflows (Basic Guide)
 
