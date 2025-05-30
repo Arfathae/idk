@@ -1,0 +1,12 @@
+# Core dependencies for the Integration Platform
+
+# Google API Client Libraries
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2 # Often a peer dependency for google-auth
+
+# OpenAI API Client Library
+openai
+
+# Other libraries will be added here as needed
+# e.g., requests, etc.
